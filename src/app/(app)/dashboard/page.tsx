@@ -1,14 +1,18 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
+import Link from "next/link";
 import { useUserStore } from "@/stores/user-store";
 import { useDailyLogStore } from "@/stores/daily-log-store";
+import { useFastingStore } from "@/stores/fasting-store";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { CalorieRing } from "@/components/nutrition/CalorieRing";
 import { MacroProgressBar } from "@/components/nutrition/MacroProgressBar";
 import { MacroDonutChart } from "@/components/nutrition/MacroDonutChart";
 import { MealList } from "@/components/meals/MealList";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
+import { StreakBadge } from "@/components/gamification/StreakBadge";
+import { MilestoneCelebration } from "@/components/gamification/MilestoneCelebration";
 import {
   Card,
   CardContent,
@@ -18,10 +22,20 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import {
   Plus,
   Droplets,
   Minus,
   CalendarDays,
+  Camera,
+  Search,
+  PlusCircle,
+  Timer,
 } from "lucide-react";
 import type { UserProfile } from "@/types/user";
 import type { ActivityLevel, FitnessGoal } from "@/types/user";
@@ -108,6 +122,30 @@ export default function DashboardPage() {
   const todayLog = useDailyLogStore((s) => s.getTodayLog());
   const removeMealEntry = useDailyLogStore((s) => s.removeMealEntry);
   const updateWaterIntake = useDailyLogStore((s) => s.updateWaterIntake);
+  const getCurrentStreak = useDailyLogStore((s) => s.getCurrentStreak);
+  const currentSession = useFastingStore((s) => s.currentSession);
+  const getTimeRemaining = useFastingStore((s) => s.getTimeRemaining);
+
+  const [quickAddOpen, setQuickAddOpen] = useState(false);
+  const [streak, setStreak] = useState(0);
+  const [fastingTime, setFastingTime] = useState(getTimeRemaining());
+
+  // Update streak on mount and when todayLog changes
+  useEffect(() => {
+    setStreak(getCurrentStreak());
+  }, [getCurrentStreak, todayLog]);
+
+  // Live fasting timer
+  useEffect(() => {
+    if (!currentSession) {
+      setFastingTime(null);
+      return;
+    }
+    const interval = setInterval(() => {
+      setFastingTime(getTimeRemaining());
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [currentSession, getTimeRemaining]);
 
   const targets = useMemo(() => {
     if (!profile) return null;
@@ -148,13 +186,21 @@ export default function DashboardPage() {
     }
   };
 
+  const pad = (n: number) => n.toString().padStart(2, "0");
+
   return (
     <PageContainer>
+      {/* Milestone celebration overlay */}
+      <MilestoneCelebration />
+
       {/* ========== Greeting Header ========== */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-foreground">
-          {getGreeting()}, {profile.name.split(" ")[0]}
-        </h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-foreground">
+            {getGreeting()}, {profile.name.split(" ")[0]}
+          </h1>
+          <StreakBadge streak={streak} />
+        </div>
         <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
           <CalendarDays className="size-4" />
           <span>{formatDate()}</span>
@@ -163,6 +209,63 @@ export default function DashboardPage() {
           {profile.goal.replace("_", " ")}
         </Badge>
       </div>
+
+      {/* ========== Fasting Status Card ========== */}
+      {currentSession && fastingTime && (
+        <Link href="/fasting">
+          <Card className="mb-4 cursor-pointer transition-colors hover:bg-card/80">
+            <CardContent className="flex items-center justify-between py-3">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-400/10">
+                  <Timer className="h-5 w-5 text-amber-400" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-foreground">
+                    {fastingTime.phase === "fasting"
+                      ? "Fasting"
+                      : "Eating Window"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {currentSession.protocol} protocol
+                  </p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-lg font-bold tabular-nums text-amber-400">
+                  {pad(fastingTime.hours)}:{pad(fastingTime.minutes)}:
+                  {pad(fastingTime.seconds)}
+                </p>
+                <p className="text-[10px] text-muted-foreground">remaining</p>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+      )}
+
+      {!currentSession && (
+        <Link href="/fasting">
+          <Card className="mb-4 cursor-pointer transition-colors hover:bg-card/80">
+            <CardContent className="flex items-center justify-between py-3">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted/40">
+                  <Timer className="h-5 w-5 text-muted-foreground" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-foreground">
+                    Intermittent Fasting
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Tap to start a fast
+                  </p>
+                </div>
+              </div>
+              <Badge variant="outline" className="text-xs">
+                Start
+              </Badge>
+            </CardContent>
+          </Card>
+        </Link>
+      )}
 
       {/* ========== Calorie Ring + Donut Row ========== */}
       <Card className="mb-4">
@@ -288,10 +391,60 @@ export default function DashboardPage() {
         size="lg"
         className="fixed bottom-24 right-4 z-50 h-14 w-14 rounded-full shadow-lg shadow-primary/30 md:right-[calc(50%-14rem)]"
         aria-label="Quick add meal"
-        asChild={false}
+        onClick={() => setQuickAddOpen(true)}
       >
         <Plus className="size-6" />
       </Button>
+
+      {/* ========== Quick-add Sheet ========== */}
+      <Sheet open={quickAddOpen} onOpenChange={setQuickAddOpen}>
+        <SheetContent side="bottom" className="rounded-t-2xl">
+          <SheetHeader>
+            <SheetTitle>Add Food</SheetTitle>
+          </SheetHeader>
+          <div className="flex flex-col gap-3 p-4 pb-8">
+            <Link href="/scan?mode=plate" onClick={() => setQuickAddOpen(false)}>
+              <Button variant="outline" className="w-full justify-start gap-3 h-14">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                  <Camera className="h-5 w-5 text-primary" />
+                </div>
+                <div className="text-left">
+                  <p className="text-sm font-medium">Scan Plate</p>
+                  <p className="text-xs text-muted-foreground">
+                    AI estimates calories from a photo
+                  </p>
+                </div>
+              </Button>
+            </Link>
+            <Link href="/food-search" onClick={() => setQuickAddOpen(false)}>
+              <Button variant="outline" className="w-full justify-start gap-3 h-14">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                  <Search className="h-5 w-5 text-primary" />
+                </div>
+                <div className="text-left">
+                  <p className="text-sm font-medium">Search Food</p>
+                  <p className="text-xs text-muted-foreground">
+                    Find in database or custom foods
+                  </p>
+                </div>
+              </Button>
+            </Link>
+            <Link href="/food-search/add" onClick={() => setQuickAddOpen(false)}>
+              <Button variant="outline" className="w-full justify-start gap-3 h-14">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                  <PlusCircle className="h-5 w-5 text-primary" />
+                </div>
+                <div className="text-left">
+                  <p className="text-sm font-medium">Add Custom</p>
+                  <p className="text-xs text-muted-foreground">
+                    Enter nutrition info manually
+                  </p>
+                </div>
+              </Button>
+            </Link>
+          </div>
+        </SheetContent>
+      </Sheet>
     </PageContainer>
   );
 }

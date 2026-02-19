@@ -10,6 +10,15 @@ interface DailyLogState {
   getLogByDate: (date: string) => DailyLog | undefined;
   getTodayLog: () => DailyLog | undefined;
   updateWaterIntake: (date: string, ml: number) => void;
+  getCurrentStreak: () => number;
+  getLongestStreak: () => number;
+  hasLoggedToday: () => boolean;
+  getStreakData: () => {
+    current: number;
+    longest: number;
+    totalDaysLogged: number;
+    loggedToday: boolean;
+  };
 }
 
 function calculateTotals(meals: MealEntry[]): MacroNutrients {
@@ -149,6 +158,82 @@ export const useDailyLogStore = create<DailyLogState>()(
 
           return { logs: [...state.logs, newLog] };
         });
+      },
+
+      hasLoggedToday: () => {
+        const today = getTodayDateString();
+        const log = get().logs.find((l) => l.date === today);
+        return !!log && log.meals.length > 0;
+      },
+
+      getCurrentStreak: () => {
+        const { logs } = get();
+        const loggedDates = new Set(
+          logs.filter((l) => l.meals.length > 0).map((l) => l.date)
+        );
+
+        let streak = 0;
+        const today = new Date();
+        // Start from today or yesterday
+        let date = new Date(today);
+        const todayStr = date.toISOString().split("T")[0];
+
+        // If today isn't logged, start checking from yesterday
+        if (!loggedDates.has(todayStr)) {
+          date.setDate(date.getDate() - 1);
+        }
+
+        while (true) {
+          const dateStr = date.toISOString().split("T")[0];
+          if (loggedDates.has(dateStr)) {
+            streak++;
+            date.setDate(date.getDate() - 1);
+          } else {
+            break;
+          }
+        }
+
+        return streak;
+      },
+
+      getLongestStreak: () => {
+        const { logs } = get();
+        const loggedDates = logs
+          .filter((l) => l.meals.length > 0)
+          .map((l) => l.date)
+          .sort();
+
+        if (loggedDates.length === 0) return 0;
+
+        let maxStreak = 1;
+        let currentStreak = 1;
+
+        for (let i = 1; i < loggedDates.length; i++) {
+          const prevDate = new Date(loggedDates[i - 1]);
+          const currDate = new Date(loggedDates[i]);
+          const diffDays = Math.round(
+            (currDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24)
+          );
+
+          if (diffDays === 1) {
+            currentStreak++;
+            maxStreak = Math.max(maxStreak, currentStreak);
+          } else if (diffDays > 1) {
+            currentStreak = 1;
+          }
+        }
+
+        return maxStreak;
+      },
+
+      getStreakData: () => {
+        const state = get();
+        return {
+          current: state.getCurrentStreak(),
+          longest: state.getLongestStreak(),
+          totalDaysLogged: state.logs.filter((l) => l.meals.length > 0).length,
+          loggedToday: state.hasLoggedToday(),
+        };
       },
     }),
     {

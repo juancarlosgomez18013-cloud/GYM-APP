@@ -1,12 +1,15 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import { Search, Clock, TrendingUp, X } from "lucide-react";
+import { Search, Clock, TrendingUp, X, PlusCircle, User } from "lucide-react";
+import Link from "next/link";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { FoodSearchBar } from "@/components/food/FoodSearchBar";
 import { FoodCard } from "@/components/food/FoodCard";
 import { FoodDetailModal } from "@/components/food/FoodDetailModal";
+import { useCustomFoodsStore } from "@/stores/custom-foods-store";
 import type { FoodItem } from "@/types/food";
 
 // Mock food database for demo purposes
@@ -221,6 +224,8 @@ export default function FoodSearchPage() {
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
 
+  const customFoods = useCustomFoodsStore((s) => s.foods);
+
   // Load recent searches on mount
   useEffect(() => {
     setRecentSearches(getRecentSearches());
@@ -238,10 +243,15 @@ export default function FoodSearchPage() {
     setIsLoading(true);
     setHasSearched(true);
 
-    // Simulate API delay then search mock data
+    // Simulate API delay then search mock data + custom foods
     const timer = setTimeout(() => {
       const q = searchQuery.toLowerCase();
-      const filtered = MOCK_FOODS.filter(
+
+      // Search both mock DB and custom foods
+      const customFoodsNow = useCustomFoodsStore.getState().foods;
+      const allFoods = [...customFoodsNow, ...MOCK_FOODS];
+
+      const filtered = allFoods.filter(
         (food) =>
           food.name.toLowerCase().includes(q) ||
           food.brand?.toLowerCase().includes(q) ||
@@ -275,22 +285,55 @@ export default function FoodSearchPage() {
   return (
     <PageContainer>
       {/* Header */}
-      <div className="mb-4 flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-          <Search className="h-5 w-5 text-primary" />
+      <div className="mb-4 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+            <Search className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-foreground">Food Search</h1>
+            <p className="text-sm text-muted-foreground">
+              Find nutrition info for any food
+            </p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-xl font-bold text-foreground">Food Search</h1>
-          <p className="text-sm text-muted-foreground">
-            Find nutrition info for any food
-          </p>
-        </div>
+        <Link href="/food-search/add">
+          <Button variant="outline" size="sm">
+            <PlusCircle className="mr-1.5 h-4 w-4" />
+            Custom
+          </Button>
+        </Link>
       </div>
 
       {/* Search bar */}
       <div className="mb-4">
         <FoodSearchBar onSearch={handleSearch} isLoading={isLoading} />
       </div>
+
+      {/* My Foods section (when custom foods exist and no search) */}
+      {!query && customFoods.length > 0 && (
+        <div className="mb-6">
+          <div className="mb-2 flex items-center gap-2">
+            <User className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-medium text-muted-foreground">
+              My Custom Foods
+            </span>
+            <Badge variant="secondary" className="text-[10px]">
+              {customFoods.length}
+            </Badge>
+          </div>
+          <div className="flex flex-col gap-2">
+            {customFoods.slice(0, 5).map((food) => (
+              <FoodCard key={food.id} food={food} onSelect={handleSelectFood} />
+            ))}
+            {customFoods.length > 5 && (
+              <p className="text-center text-xs text-muted-foreground">
+                Search to see all {customFoods.length} custom foods
+              </p>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Recent searches (shown when no query) */}
       {!query && recentSearches.length > 0 && (
@@ -368,11 +411,14 @@ export default function FoodSearchPage() {
                 No results found
               </h3>
               <p className="mt-1 text-center text-sm text-muted-foreground">
-                Try a different search term or check for typos
+                Try a different search term or add it manually
               </p>
-              <p className="mt-3 text-xs text-muted-foreground/70">
-                In production, this searches the USDA and Open Food Facts databases
-              </p>
+              <Link href="/food-search/add" className="mt-4">
+                <Button variant="outline" size="sm">
+                  <PlusCircle className="mr-1.5 h-4 w-4" />
+                  Add Custom Food
+                </Button>
+              </Link>
             </div>
           )}
         </div>
