@@ -19,7 +19,23 @@ export const COLORS = {
   orange400: "#fb923c",
   red400: "#f87171",
   blue400: "#60a5fa",
+  // Gradient colors
+  gradientStart: "#4ade80",
+  gradientEnd: "#2dd4bf",
+  gradientGold: "#fbbf24",
+  gradientOrange: "#fb923c",
+  // Glassmorphism
+  glassBackground: "rgba(20, 34, 24, 0.65)",
+  glassBorder: "rgba(74, 222, 128, 0.12)",
 } as const;
 
 export const WATER_GOAL_ML = 2500;
 export const WATER_STEP_ML = 250;
+
+// Animation durations (ms)
+export const ANIM = {
+  fast: 150,
+  normal: 300,
+  slow: 500,
+  spring: { damping: 15, stiffness: 150 },
+} as const;

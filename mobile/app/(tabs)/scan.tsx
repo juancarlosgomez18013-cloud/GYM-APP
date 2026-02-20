@@ -10,6 +10,8 @@ import { Card, CardContent } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { COLORS } from "@/constants/theme";
+import { haptic } from "@/lib/haptics";
+import { GradientButton } from "@/components/ui/GradientButton";
 import { useDailyLogStore } from "@/stores/daily-log-store";
 import { recognizePlateFromImage } from "@/lib/api/claude";
 import type { RecognizedPlateItem } from "@/types/recognition";
@@ -30,6 +32,7 @@ export default function ScanScreen() {
 
   const takePhoto = async () => {
     if (!cameraRef.current) return;
+    haptic.medium();
     const photo = await cameraRef.current.takePictureAsync({ base64: true, quality: 0.7 });
     if (photo?.base64) {
       setCapturedImage(`data:image/jpeg;base64,${photo.base64}`);
@@ -64,6 +67,7 @@ export default function ScanScreen() {
   };
 
   const addToLog = (item: RecognizedPlateItem, mealType: MealType = "lunch") => {
+    haptic.success();
     const today = new Date().toISOString().split("T")[0];
     const food: FoodItem = {
       id: nanoid(), name: item.name, source: "ai_recognized",
@@ -128,9 +132,9 @@ export default function ScanScreen() {
                   <Text className="text-xs text-muted-foreground">Fat</Text>
                 </View>
               </View>
-              <Button onPress={() => addToLog(item)} className="mt-3">
-                <Text className="text-sm font-semibold text-primary-foreground">Add to Log</Text>
-              </Button>
+              <GradientButton onPress={() => addToLog(item)} className="mt-3">
+                <Text className="text-sm font-bold text-primary-foreground">Add to Log</Text>
+              </GradientButton>
             </CardContent>
           </Card>
         ))}

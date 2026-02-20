@@ -1,6 +1,8 @@
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { View } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { COLORS } from "@/constants/theme";
 
 export default function TabLayout() {
   return (
@@ -8,14 +10,15 @@ export default function TabLayout() {
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: "#142218",
-          borderTopColor: "#2a3d30",
+          backgroundColor: COLORS.glassBackground,
+          borderTopColor: COLORS.glassBorder,
+          borderTopWidth: 1,
           height: 85,
           paddingBottom: 25,
           paddingTop: 8,
         },
-        tabBarActiveTintColor: "#4ade80",
-        tabBarInactiveTintColor: "#9ca3af",
+        tabBarActiveTintColor: COLORS.primary,
+        tabBarInactiveTintColor: COLORS.mutedForeground,
         tabBarLabelStyle: {
           fontSize: 11,
           fontWeight: "600",
@@ -45,16 +48,30 @@ export default function TabLayout() {
         options={{
           title: "Scan",
           tabBarIcon: ({ color, focused }) => (
-            <View
-              className={`w-14 h-14 rounded-full items-center justify-center -mt-6 ${
-                focused ? "bg-primary" : "bg-card border border-border"
-              }`}
-            >
-              <Ionicons
-                name="camera"
-                size={26}
-                color={focused ? "#0a1a0f" : "#4ade80"}
-              />
+            <View className="w-14 h-14 rounded-full -mt-6 overflow-hidden">
+              {focused ? (
+                <LinearGradient
+                  colors={[COLORS.gradientStart, COLORS.gradientEnd]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  className="flex-1 items-center justify-center"
+                  style={{ borderRadius: 28 }}
+                >
+                  <Ionicons name="camera" size={26} color={COLORS.primaryForeground} />
+                </LinearGradient>
+              ) : (
+                <View
+                  className="flex-1 items-center justify-center"
+                  style={{
+                    backgroundColor: COLORS.glassBackground,
+                    borderWidth: 1,
+                    borderColor: COLORS.glassBorder,
+                    borderRadius: 28,
+                  }}
+                >
+                  <Ionicons name="camera" size={26} color={COLORS.primary} />
+                </View>
+              )}
             </View>
           ),
         }}

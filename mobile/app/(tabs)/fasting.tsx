@@ -12,6 +12,8 @@ import { useFastingStore } from "@/stores/fasting-store";
 import { FASTING_PROTOCOLS } from "@/types/fasting";
 import type { FastingProtocol } from "@/types/fasting";
 import { COLORS } from "@/constants/theme";
+import { haptic } from "@/lib/haptics";
+import { GradientButton } from "@/components/ui/GradientButton";
 
 function getProtocolHours(protocol: FastingProtocol, cf: number, ce: number) {
   if (protocol === "custom") return { fasting: cf, eating: ce };
@@ -40,6 +42,7 @@ export default function FastingScreen() {
   }, [getTimeRemaining]);
 
   const handleStart = () => {
+    haptic.medium();
     updateSettings({ preferredProtocol: selected, customFastingHours: customF, customEatingHours: customE });
     startFast(selected, selected === "custom" ? { fasting: customF, eating: customE } : undefined);
   };
@@ -76,23 +79,23 @@ export default function FastingScreen() {
           )}
           <View className="flex-row gap-3 mt-6 w-full">
             {!currentSession ? (
-              <Button onPress={handleStart} className="flex-1">
+              <GradientButton onPress={handleStart} className="flex-1">
                 <View className="flex-row items-center gap-2">
                   <Ionicons name="play" size={16} color={COLORS.primaryForeground} />
-                  <Text className="text-sm font-semibold text-primary-foreground">
+                  <Text className="text-sm font-bold text-primary-foreground">
                     Start Fast ({selected === "custom" ? `${customF}:${customE}` : selected})
                   </Text>
                 </View>
-              </Button>
+              </GradientButton>
             ) : (
               <>
-                <Button onPress={endFast} className="flex-1">
+                <Button onPress={() => { haptic.success(); endFast(); }} className="flex-1">
                   <View className="flex-row items-center gap-2">
                     <Ionicons name="stop" size={16} color={COLORS.primaryForeground} />
                     <Text className="text-sm font-semibold text-primary-foreground">End Fast</Text>
                   </View>
                 </Button>
-                <Button variant="outline" onPress={cancelFast} className="flex-1">
+                <Button variant="outline" onPress={() => { haptic.warning(); cancelFast(); }} className="flex-1">
                   <View className="flex-row items-center gap-2">
                     <Ionicons name="close-circle-outline" size={16} color={COLORS.foreground} />
                     <Text className="text-sm text-foreground">Cancel</Text>

@@ -2,11 +2,13 @@ import { useState } from "react";
 import { View, Text, Pressable, TextInput, Alert } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { COLORS } from "@/constants/theme";
+import { haptic } from "@/lib/haptics";
 import { useUserStore } from "@/stores/user-store";
 import { useDailyLogStore } from "@/stores/daily-log-store";
 
@@ -34,15 +36,24 @@ export default function ProfileScreen() {
 
   const handleWeightLog = () => {
     const w = Number(newWeight);
-    if (w > 0 && w < 500) { addWeightEntry(w); setNewWeight(""); Alert.alert("Logged!", `Weight updated to ${w}kg`); }
+    if (w > 0 && w < 500) { haptic.success(); addWeightEntry(w); setNewWeight(""); Alert.alert("Logged!", `Weight updated to ${w}kg`); }
   };
 
   return (
     <PageContainer>
-      {/* Header */}
+      {/* Header with gradient avatar ring */}
       <View className="items-center mb-6 pt-2">
-        <View className="w-20 h-20 rounded-full bg-primary/20 items-center justify-center mb-3">
-          <Ionicons name="person" size={36} color={COLORS.primary} />
+        <View className="w-24 h-24 rounded-full overflow-hidden p-0.5 mb-3">
+          <LinearGradient
+            colors={[COLORS.gradientStart, COLORS.gradientEnd]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            className="flex-1 rounded-full p-0.5"
+          >
+            <View className="flex-1 rounded-full bg-background items-center justify-center">
+              <Ionicons name="person" size={36} color={COLORS.primary} />
+            </View>
+          </LinearGradient>
         </View>
         <Text className="text-xl font-bold text-foreground">{profile.name}</Text>
         <Badge variant="secondary" className="mt-1">{profile.goal.replace("_", " ")}</Badge>

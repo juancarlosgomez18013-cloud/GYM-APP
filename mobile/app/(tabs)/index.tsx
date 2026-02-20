@@ -2,6 +2,8 @@ import { useMemo, useState, useEffect } from "react";
 import { View, Text, Pressable, Modal } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import { FadeInDown } from "@/components/animations/FadeInDown";
 import { useUserStore } from "@/stores/user-store";
 import { useDailyLogStore } from "@/stores/daily-log-store";
 import { useFastingStore } from "@/stores/fasting-store";
@@ -12,11 +14,12 @@ import { MacroDonutChart } from "@/components/nutrition/MacroDonutChart";
 import { MealList } from "@/components/meals/MealList";
 import { StreakBadge } from "@/components/gamification/StreakBadge";
 import { MilestoneCelebration } from "@/components/gamification/MilestoneCelebration";
-import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
+import { DashboardSkeleton } from "@/components/shared/DashboardSkeleton";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { COLORS, WATER_GOAL_ML, WATER_STEP_ML } from "@/constants/theme";
+import { haptic } from "@/lib/haptics";
 import type { UserProfile, ActivityLevel, FitnessGoal } from "@/types/user";
 
 function getGreeting(): string {
@@ -74,7 +77,7 @@ export default function DashboardScreen() {
   const targets = useMemo(() => profile ? calculateTargets(profile) : null, [profile]);
 
   if (!profile || !targets) {
-    return <PageContainer><LoadingSpinner className="mt-32" label="Loading your profile..." /></PageContainer>;
+    return <DashboardSkeleton />;
   }
 
   const today = getTodayStr();
@@ -90,23 +93,26 @@ export default function DashboardScreen() {
       <MilestoneCelebration />
 
       {/* Greeting */}
-      <View className="mb-6">
-        <View className="flex-row items-center justify-between">
-          <Text className="text-2xl font-bold text-foreground">
-            {getGreeting()}, {profile.name.split(" ")[0]}
-          </Text>
-          <StreakBadge streak={streak} />
+      <FadeInDown delay={0}>
+        <View className="mb-6">
+          <View className="flex-row items-center justify-between">
+            <Text className="text-2xl font-bold text-foreground">
+              {getGreeting()}, {profile.name.split(" ")[0]}
+            </Text>
+            <StreakBadge streak={streak} />
+          </View>
+          <View className="flex-row items-center gap-2 mt-1">
+            <Ionicons name="calendar-outline" size={16} color={COLORS.mutedForeground} />
+            <Text className="text-sm text-muted-foreground">{formatDate()}</Text>
+          </View>
+          <Badge variant="secondary" className="mt-2 self-start">
+            {profile.goal.replace("_", " ")}
+          </Badge>
         </View>
-        <View className="flex-row items-center gap-2 mt-1">
-          <Ionicons name="calendar-outline" size={16} color={COLORS.mutedForeground} />
-          <Text className="text-sm text-muted-foreground">{formatDate()}</Text>
-        </View>
-        <Badge variant="secondary" className="mt-2 self-start">
-          {profile.goal.replace("_", " ")}
-        </Badge>
-      </View>
+      </FadeInDown>
 
       {/* Fasting Status */}
+      <FadeInDown delay={80}>
       <Pressable onPress={() => router.push("/(tabs)/fasting")}>
         <Card className="mb-4">
           <View className="flex-row items-center justify-between">
@@ -136,8 +142,10 @@ export default function DashboardScreen() {
           </View>
         </Card>
       </Pressable>
+      </FadeInDown>
 
       {/* Calorie Ring + Donut */}
+      <FadeInDown delay={160}>
       <Card className="mb-4">
         <CardHeader><CardTitle>Daily Calories</CardTitle></CardHeader>
         <CardContent>
@@ -147,8 +155,10 @@ export default function DashboardScreen() {
           </View>
         </CardContent>
       </Card>
+      </FadeInDown>
 
       {/* Macros */}
+      <FadeInDown delay={240}>
       <Card className="mb-4">
         <CardHeader><CardTitle>Macronutrients</CardTitle></CardHeader>
         <CardContent className="gap-4">
@@ -157,8 +167,10 @@ export default function DashboardScreen() {
           <MacroProgressBar label="Fat" current={totals.fat} target={targets.fat} color={COLORS.macroFat} />
         </CardContent>
       </Card>
+      </FadeInDown>
 
       {/* Water */}
+      <FadeInDown delay={320}>
       <Card className="mb-4">
         <CardHeader>
           <View className="flex-row items-center gap-2">
@@ -179,13 +191,13 @@ export default function DashboardScreen() {
             </View>
             <View className="flex-row items-center gap-2">
               <Pressable
-                onPress={() => waterMl >= WATER_STEP_ML && updateWaterIntake(today, waterMl - WATER_STEP_ML)}
+                onPress={() => { haptic.light(); waterMl >= WATER_STEP_ML && updateWaterIntake(today, waterMl - WATER_STEP_ML); }}
                 className="w-9 h-9 rounded-lg border border-border items-center justify-center active:opacity-60"
               >
                 <Ionicons name="remove" size={18} color={COLORS.foreground} />
               </Pressable>
               <Pressable
-                onPress={() => updateWaterIntake(today, waterMl + WATER_STEP_ML)}
+                onPress={() => { haptic.light(); updateWaterIntake(today, waterMl + WATER_STEP_ML); }}
                 className="w-9 h-9 rounded-lg border border-border items-center justify-center active:opacity-60"
               >
                 <Ionicons name="add" size={18} color={COLORS.foreground} />
@@ -193,12 +205,21 @@ export default function DashboardScreen() {
             </View>
           </View>
           <View className="mt-3 h-2.5 rounded-full bg-muted/40 overflow-hidden">
-            <View className="h-full rounded-full bg-blue-400" style={{ width: `${waterPercent}%` }} />
+            <View className="h-full rounded-full overflow-hidden" style={{ width: `${waterPercent}%` }}>
+              <LinearGradient
+                colors={["#60a5fa", "#3b82f6"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                className="flex-1"
+              />
+            </View>
           </View>
         </CardContent>
       </Card>
+      </FadeInDown>
 
       {/* Meals */}
+      <FadeInDown delay={400}>
       <View className="mb-4">
         <View className="flex-row items-center justify-between mb-3">
           <Text className="text-lg font-semibold text-foreground">Today's Meals</Text>
@@ -206,14 +227,22 @@ export default function DashboardScreen() {
         </View>
         <MealList meals={meals} onDeleteMeal={(id) => removeMealEntry(today, id)} />
       </View>
+      </FadeInDown>
 
-      {/* FAB */}
+      {/* FAB with gradient */}
       <Pressable
-        onPress={() => setQuickAddOpen(true)}
-        className="absolute bottom-6 right-4 w-14 h-14 rounded-full bg-primary items-center justify-center shadow-lg active:opacity-80"
+        onPress={() => { haptic.medium(); setQuickAddOpen(true); }}
+        className="absolute bottom-6 right-4 w-14 h-14 rounded-full overflow-hidden shadow-lg active:opacity-80"
         style={{ elevation: 8 }}
       >
-        <Ionicons name="add" size={28} color={COLORS.primaryForeground} />
+        <LinearGradient
+          colors={[COLORS.gradientStart, COLORS.gradientEnd]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          className="flex-1 items-center justify-center"
+        >
+          <Ionicons name="add" size={28} color={COLORS.primaryForeground} />
+        </LinearGradient>
       </Pressable>
 
       {/* Quick Add Modal */}

@@ -2,11 +2,14 @@ import { useState } from "react";
 import { View, Text, Pressable, TextInput, ScrollView, KeyboardAvoidingView, Platform } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { nanoid } from "nanoid";
 import { Button } from "@/components/ui/Button";
+import { GradientButton } from "@/components/ui/GradientButton";
 import { Card, CardContent } from "@/components/ui/Card";
 import { COLORS } from "@/constants/theme";
+import { haptic } from "@/lib/haptics";
 import { useUserStore } from "@/stores/user-store";
 import type { Sex, ActivityLevel, FitnessGoal, DietType, UserProfile } from "@/types/user";
 
@@ -28,10 +31,11 @@ export default function OnboardingScreen() {
   const [dietType, setDietType] = useState<DietType>("balanced");
   const [country, setCountry] = useState("US");
 
-  const next = () => { if (step < 4) setStep(step + 1); };
-  const back = () => { if (step > 0) setStep(step - 1); };
+  const next = () => { haptic.selection(); if (step < 4) setStep(step + 1); };
+  const back = () => { haptic.light(); if (step > 0) setStep(step - 1); };
 
   const finish = () => {
+    haptic.success();
     const profile: UserProfile = {
       id: nanoid(), name: name.trim() || "User", sex, age: Number(age) || 25,
       heightCm: Number(heightCm) || 175, weightKg: Number(weightKg) || 75,
@@ -156,7 +160,16 @@ export default function OnboardingScreen() {
         <View className="px-4 pt-4 mb-2">
           <View className="flex-row gap-2">
             {STEPS.map((_, i) => (
-              <View key={i} className={`flex-1 h-1 rounded-full ${i <= step ? "bg-primary" : "bg-muted"}`} />
+              <View key={i} className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: COLORS.muted }}>
+                {i <= step && (
+                  <LinearGradient
+                    colors={[COLORS.gradientStart, COLORS.gradientEnd]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    className="flex-1 rounded-full"
+                  />
+                )}
+              </View>
             ))}
           </View>
           <Text className="text-xs text-muted-foreground mt-2">Step {step + 1} of {STEPS.length} - {STEPS[step]}</Text>
@@ -170,9 +183,13 @@ export default function OnboardingScreen() {
         <View className="flex-row gap-3 px-4 py-4 border-t border-border">
           {step > 0 && <Button variant="outline" onPress={back} className="flex-1"><Text className="text-foreground">Back</Text></Button>}
           {step < 4 ? (
-            <Button onPress={next} className="flex-1"><Text className="text-primary-foreground font-semibold">Next</Text></Button>
+            <GradientButton onPress={next} className="flex-1">
+              <Text className="text-sm font-bold text-primary-foreground">Next</Text>
+            </GradientButton>
           ) : (
-            <Button onPress={finish} className="flex-1"><Text className="text-primary-foreground font-semibold">Complete Setup</Text></Button>
+            <GradientButton onPress={finish} className="flex-1">
+              <Text className="text-sm font-bold text-primary-foreground">Complete Setup</Text>
+            </GradientButton>
           )}
         </View>
       </KeyboardAvoidingView>
